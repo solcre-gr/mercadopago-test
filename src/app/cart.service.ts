@@ -63,4 +63,24 @@ export class CartService {
 			})
 		);
 	}
+
+	public createOrder(order: any): Observable<any>{
+		//TODO: Use apiService
+
+		//Url
+		const url: string = environment.apiURL + environment.ordersURI;
+
+		//Post options
+		const httpOptions = {
+			headers: new HttpHeaders({
+				'Authorization': 'Bearer ' + JSON.parse(
+					localStorage.getItem('mp_access_token')
+				).access_token,
+				'Accept': 'application/vnd.ecommerce.v2+json'
+			})
+		}
+
+		//Do request with hardcoded data
+		return this.httpClient.post(url, order, httpOptions);
+	}
 }

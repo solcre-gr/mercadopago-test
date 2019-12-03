@@ -66,25 +66,20 @@
 			</fieldset>
 		</form>
 
-		<!-- CREAR ORDEN -->
-		<h1>Orden a pagar: <span *ngIf="orderId">#{{ orderId }}</span></h1>
-		<button 
-			*ngIf="!orderId" 
-			(click)="onCreateOrderForTesting()">Crear orden</button>
+		<!-- CREAR y PAGAR ORDEN -->
+		<h1>Pagar orden con: </h1>
+		<form [formGroup]="payForm" (submit)="onPay()">
+			<ng-container *ngFor="let card of cards">
+				<input formControlName="card" type="radio" [value]="card.id" /> {{ card.id }} - {{ card.cardType }} -  {{ card.lastDigits }} ({{ card.expirationMonth }}/{{ card.expirationYear}})<br />
+			</ng-container>
 
-		<!-- PAGAR ORDEN -->
-		<div *ngIf="orderId">
-			<h1>Pagar orden con: </h1>
-			<form [formGroup]="payForm" (submit)="onPay()">
-				<ng-container *ngFor="let card of cards">
-					<input formControlName="card" type="radio" [value]="card.id" /> {{ card.cardType }} -  {{ card.lastDigits }} ({{ card.expirationMonth }}/{{ card.expirationYear}})<br />
-				</ng-container>
-	
-				<input 
-					[disabled]="!payForm.valid"
-					type="submit" 
-					value="Pagar con esta tarjeta" />
-			</form>
-		</div>
+			<label>Cuotas</label>
+			<input formControlName="installments" type="number" />
+
+			<input 
+				[disabled]="!payForm.valid"
+				type="submit" 
+				value="Pagar" />
+		</form>
 	</div>
 </div>

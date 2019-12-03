@@ -5,7 +5,8 @@
 export const environment = {
   production: false,
   apiURL: "//api.columnis.com/065",
-  cardsURI: "/ecommerce/1/users-cards"
+  cardsURI: "/ecommerce/1/users-cards",
+  ordersURI: "/ecommerce/orders"
 };
 
 /*

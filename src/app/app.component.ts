@@ -25,7 +25,6 @@ export class AppComponent implements OnInit {
 
 	//JUST FOR TEST
 	accessToken: any;
-	orderId: number;
 
 	//Inject services
 	constructor(
@@ -53,7 +52,8 @@ export class AppComponent implements OnInit {
 			"docNumber": this.formBuilder.control('12345678', [Validators.required]),
 		});
 		this.payForm = this.formBuilder.group({
-			"card": this.formBuilder.control('', [ Validators.required ])
+			"card": this.formBuilder.control('', [ Validators.required ]),
+			"installments": this.formBuilder.control('1', [ Validators.required ])
 		});
 
 		//Init cart state
@@ -123,6 +123,10 @@ export class AppComponent implements OnInit {
 		}
 	}
 
+	onPay(){
+		this.createOrderAndPay();
+	}
+
 	//Private methods
 	private initMP() {
 		//Init SDK
@@ -169,27 +173,13 @@ export class AppComponent implements OnInit {
 		);
 	}
 
-	//JUST FOR TEST METHODS
-	onLogin() {
-		this.login();
-	}
-
-	onCreateOrderForTesting(){
+	createOrderAndPay(){
+		//Start loading
 		this.loading = true;
 
-		//Url
-		const url: string = environment.apiURL + '/ecommerce/orders';
-
-		//Post options
-		const httpOptions = {
-			headers: new HttpHeaders({
-				'Authorization': 'Bearer ' + this.accessToken.access_token,
-				'Accept': 'application/vnd.ecommerce.v2+json'
-			})
-		}
-
-		//Do request with hardcoded data
-		this.httpClient.post(url, {
+		//TODO: Use your cart object
+		//Create order object
+		let order: any = {
 			"items":[
 				{"product":22,"quantity":1},
 				{"product":1,"quantity":1,"price":0}
@@ -208,12 +198,22 @@ export class AppComponent implements OnInit {
 			"city":"",
 			"extra_data": {"paymentMethod":1},
 			"payment_gateway":1,
-			"total":1
-		}, httpOptions).subscribe(
+			"total":1,
+			//Load MP values
+			"card": {
+				"id": this.payForm.value.card,
+				"installments": this.payForm.value.installments
+			}
+		};
+
+		//Do request
+		this.cartService.createOrder(order).subscribe(
 			(response: any) => {
+				//Clear pay form
+				this.payForm.reset();
+
 				//Load orderId
-				this.orderId = response.id;
-				localStorage.setItem('mp_order', response.id);
+				console.log(response);
 
 				//Stop loading
 				this.loading = false;
@@ -221,8 +221,16 @@ export class AppComponent implements OnInit {
 			(error: any) => {
 				//Stop loading
 				this.loading = false;
+
+				//Error
+				console.warn(error);
 			}
-		)
+		);
+	}
+
+	//JUST FOR TEST METHODS
+	onLogin() {
+		this.login();
 	}
 
 	private login() {
@@ -251,15 +259,9 @@ export class AppComponent implements OnInit {
 	private loadSession() {
 		let token: string = localStorage.getItem('mp_access_token');
 		let order: number = +localStorage.getItem('mp_order');
-
 		//Check token
 		if (token) {
 			this.accessToken = JSON.parse(token);
-		}
-
-		//Check order
-		if(order){
-			this.orderId = order;
 		}
 	}
 }
