@@ -1,0 +1,70 @@
+<div *ngIf="loading">
+	<span>Loading...</span>
+</div>
+
+<div *ngIf="!loading">
+	<!-- CART STATE -->
+	<div>
+		<span *ngIf="cartState === cartStates.NOT_LOGGED">No se inició sesión</span>
+		<span *ngIf="cartState === cartStates.LOGGED">Sesión iniciada</span>
+	</div>
+
+	<!-- LOGIN (JUST FOR TEST) -->
+	<button *ngIf="cartState === cartStates.NOT_LOGGED" (click)="onLogin()">LOGIN</button>
+
+	<!-- CART CARDS -->
+	<div *ngIf="cartState === cartStates.LOGGED">
+		<h1>Tarjetas</h1>
+
+		<form [formGroup]="cardForm" (submit)="onAddCard()">
+			<fieldset>
+				<ul>
+					<li>
+						<label for="email">Email</label>
+						<input formControlName="email" type="email" />
+					</li>
+					<li>
+						<label for="cardNumber">Credit card number:</label>
+						<input 
+							(change)="onCardNumberChange()"
+							formControlName="cardNumber" 
+							type="text" />
+						<span>PAYMENT METHOD: {{ cardPaymentMethod }} </span>
+					</li>
+					<li>
+						<label for="securityCode">Security code:</label>
+						<input formControlName="securityCode" type="text" />
+					</li>
+					<li>
+						<label for="cardExpirationMonth">Expiration month:</label>
+						<input formControlName="cardExpirationMonth" type="text" />
+					</li>
+					<li>
+						<label for="cardExpirationYear">Expiration year:</label>
+						<input formControlName="cardExpirationYear" type="text" />
+					</li>
+					<li>
+						<label for="cardholderName">Card holder name:</label>
+						<input formControlName="cardholderName" type="text" />
+					</li>
+					<li>
+						<label for="docType">Document type:</label>
+						<select formControlName="docType">
+							<option
+								*ngFor="let identificationType of identificationTypes" 
+								[value]="identificationType.id">{{ identificationType.name }}</option>
+						</select>
+					</li>
+					<li>
+						<label for="docNumber">Document number:</label>
+						<input formControlName="docNumber" type="text" />
+					</li>
+				</ul>
+				<input 
+					[disabled]="!cardPaymentMethod"
+					type="submit" 
+					value="Add card" />
+			</fieldset>
+		</form>
+	</div>
+</div>
