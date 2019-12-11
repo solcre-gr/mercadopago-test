@@ -57,7 +57,9 @@ export class AppComponent implements OnInit {
 		this.payForm = this.formBuilder.group({
 			"card": this.formBuilder.control('', [ Validators.required ]),
 			"paymentMethodType": this.formBuilder.control('', [ Validators.required ]),
-			"installments": this.formBuilder.control('1', [ Validators.required ])
+			"installments": this.formBuilder.control('1', [ Validators.required ]),
+			"issuer": this.formBuilder.control('', [ Validators.required ]),
+			"cvv": this.formBuilder.control('', [ Validators.required ])
 		});
 
 		//Init cart state
@@ -134,9 +136,12 @@ export class AppComponent implements OnInit {
 	}
 
 	onChangePaymentMethod(){
+		//Empty values
 		let values: any  = {
 			"card": "",
-			"installments": ""
+			"installments": "",
+			"issuer": "",
+			"cvv": ""
 		};
 
 		//Is other than card?
@@ -144,7 +149,9 @@ export class AppComponent implements OnInit {
 			//Clear card & installments
 			values = {
 				"card": "-",
-				"installments": "-"
+				"installments": "-",
+				"issuer": "-",
+				"cvv": "-"
 			};
 		}
 
@@ -153,7 +160,7 @@ export class AppComponent implements OnInit {
 	}
 
 	onChangeCardSelected(){
-		let card: any = this.cards.filter(c => c.id == this.payForm.value.card).pop();
+		let card: any = this.getSelectedCard();
 
 		//TODO: REMOVE THIS AND LOAD FROM ORDER
 		let orderTotal: number = 10000;
@@ -162,14 +169,18 @@ export class AppComponent implements OnInit {
 		this.installments = [];
 
 		//Clear issuer id from form
+		this.payForm.patchValue({
+			"installments": "",
+			"issuer": ""
+		});
 
 		//Check card found
 		if(card){
 			//Fetch installments
 			this.mercadoPagoService.getInstallments(card.firstSixDigits, orderTotal).subscribe(
-				(installments: any) => {
+				(installmentsResponse: any) => {
 					//Load installments
-					this.installments = installments.payer_costs;
+					this.installments = installmentsResponse.payer_costs;
 
 					//Suggest installemt
 					if(this.installments && this.installments.length){
@@ -179,6 +190,11 @@ export class AppComponent implements OnInit {
 					}
 
 					//Load issuer id to payForm
+					if(installmentsResponse.issuer && installmentsResponse.issuer.id){
+						this.payForm.patchValue({
+							"issuer": installmentsResponse.issuer.id
+						});
+					}
 				}
 			)
 		}
@@ -241,7 +257,38 @@ export class AppComponent implements OnInit {
 	private createOrderAndPay(){
 		//Start loading
 		this.loading = true;
+		
+		//Get selected card
+		let payObj: any = this.payForm.value;
+		let card: any = this.getSelectedCard();
+		let paymentMethodType: string = payObj.paymentMethodType
 
+		//Check pay with card???
+		if(card){
+			//Get cardToken + cvv token
+			this.mercadoPagoService.createCardToken({
+				"cardId": card.cardId,
+                "securityCode": payObj.cvv
+			}).subscribe(
+				(response: any) => {
+					//Check payment token
+					if(response.id){
+						//Proceed with payment
+						this.payOrder(card.cardType, response.id, payObj.issuer, payObj.installments);
+					}
+				},
+				(error: any) => {
+					//Stop loading
+					this.loading = false;
+				});
+			return;
+		} 
+
+		//Pay with abitab
+		this.payOrder(paymentMethodType);
+	}
+
+	private payOrder(paymentMethodType: string, cardToken?: string, cardIssuer?: string, cardInstallments?: number){
 		//TODO: Use your cart object
 		//Create order object
 		let order: any = {
@@ -263,14 +310,18 @@ export class AppComponent implements OnInit {
 			"city":"",
 			"extra_data": {"paymentMethod":1},
 			"total":1,
-			//Load MP values
-			"card": {
-				"id": this.payForm.value.card,
-				"installments": this.payForm.value.installments
-			},
-			"paymentMethodType": this.payForm.value.paymentMethodType,
+			"paymentMethodType": paymentMethodType,
 			"payment_gateway": 1
 		};
+
+		//Check card values
+		if(cardToken && cardIssuer && cardInstallments){
+			order.card = {
+				"token": cardToken,
+				"issuer_id": cardIssuer,
+				"installments": cardInstallments
+			};
+		}
 
 		//Do request
 		this.cartService.createOrder(order).subscribe(
@@ -278,7 +329,7 @@ export class AppComponent implements OnInit {
 				//Clear pay form
 				this.payForm.reset();
 
-				//Load orderId
+				//console
 				console.log(response);
 
 				//Stop loading
@@ -292,6 +343,10 @@ export class AppComponent implements OnInit {
 				console.warn(error);
 			}
 		);
+	}
+
+	private getSelectedCard(): any{
+		return this.payForm.value.card ? this.cards.filter(c => c.id == this.payForm.value.card).pop() : null;
 	}
 
 	//JUST FOR TEST METHODS

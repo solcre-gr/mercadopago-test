@@ -96,10 +96,13 @@
 						[value]="card.id" /> {{ card.id }} - {{ card.cardType }} -  {{ card.lastDigits }} ({{ card.expirationMonth }}/{{ card.expirationYear}})<br />
 				</ng-container>
 	
-				<label>Cuotas</label>
+				<label>Cuotas</label><br />
 				<select formControlName="installments">
 					<option *ngFor="let i of installments" [value]="i.installments">{{ i.installments }}</option>
-				</select>
+				</select><br />
+
+				<label>CVV</label><br />
+				<input type="text" formControlName="cvv" /><br />
 			</ng-container>
 
 			<input 
