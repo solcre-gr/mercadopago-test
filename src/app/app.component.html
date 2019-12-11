@@ -69,12 +69,38 @@
 		<!-- CREAR y PAGAR ORDEN -->
 		<h1>Pagar orden con: </h1>
 		<form [formGroup]="payForm" (submit)="onPay()">
-			<ng-container *ngFor="let card of cards">
-				<input formControlName="card" type="radio" [value]="card.id" /> {{ card.id }} - {{ card.cardType }} -  {{ card.lastDigits }} ({{ card.expirationMonth }}/{{ card.expirationYear}})<br />
+
+			<!-- Payment methods -->
+			<label>Payment methods: </label><br />
+			<input 
+				formControlName="paymentMethodType" 
+				type="radio" 
+				[value]="cardPaymentMethodType" 
+				(change)="onChangePaymentMethod()"/> Card <br />
+			<ng-container *ngFor="let paymentMethod of paymentMethods">
+				<input 
+					formControlName="paymentMethodType" 
+					type="radio" 
+					[value]="paymentMethod.id" 
+					(change)="onChangePaymentMethod()"/> {{ paymentMethod.name }}<br />
 			</ng-container>
 
-			<label>Cuotas</label>
-			<input formControlName="installments" type="number" />
+			<!-- Cards -->
+			<ng-container *ngIf="payForm.value.paymentMethodType === cardPaymentMethodType">
+				<label>Cards: </label><br />
+				<ng-container *ngFor="let card of cards">
+					<input 
+						formControlName="card" 
+						type="radio" 
+						(change)="onChangeCardSelected()"
+						[value]="card.id" /> {{ card.id }} - {{ card.cardType }} -  {{ card.lastDigits }} ({{ card.expirationMonth }}/{{ card.expirationYear}})<br />
+				</ng-container>
+	
+				<label>Cuotas</label>
+				<select formControlName="installments">
+					<option *ngFor="let i of installments" [value]="i.installments">{{ i.installments }}</option>
+				</select>
+			</ng-container>
 
 			<input 
 				[disabled]="!payForm.valid"

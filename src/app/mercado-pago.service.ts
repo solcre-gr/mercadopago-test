@@ -14,7 +14,7 @@ export class MercadoPagoService {
 		private httpClient: HttpClient) { }
 
 	public initSDK() {
-		Mercadopago.setPublishableKey("TEST-b5d66944-5a62-4c62-ac4c-4a43aa521c41");
+		Mercadopago.setPublishableKey("TEST-eb7f5741-5f7f-4a66-bb0d-06b0e1181369");
 	}
 
 	/**
@@ -38,6 +38,29 @@ export class MercadoPagoService {
 		return obs;
 	}
 
+	/**
+	 * Returns payment methods types
+	 */
+	public fetchPaymentMethod(): Observable<any[]> {
+		let obs: Observable<any[]> = new Observable<any[]>(observer => {
+
+			//Do request
+			Mercadopago.getAllPaymentMethods((status: number, response: any[]) => {
+
+				//Check status
+				if (status == 200) {
+					//Success
+					observer.next(response);
+					observer.complete();
+				} else {
+					//Error
+					observer.error();
+				}
+			})
+		});
+		return obs;
+	}
+
 	/***
 	 * Returns payment method from BIN number
 	 */
@@ -45,6 +68,30 @@ export class MercadoPagoService {
 		let obs: Observable<any> = new Observable<any>(observer => {
 			//Do request
 			Mercadopago.getPaymentMethod({ "bin": bin }, (status: number, response: any[]) => {
+				//Check status
+				if (status == 200) {
+					//Success
+					observer.next(response[0]);
+					observer.complete();
+				} else {
+					//Error
+					observer.error();
+				}
+			})
+		});
+		return obs;
+	}
+
+	/***
+	 * Returns payment installments from BIN number
+	 */
+	public getInstallments(bin: string, amount: number): Observable<any> {
+		let obs: Observable<any> = new Observable<any>(observer => {
+			//Do request
+			Mercadopago.getInstallments({ 
+				"bin": bin,
+				"amount": amount 
+			}, (status: number, response: any[]) => {
 				//Check status
 				if (status == 200) {
 					//Success

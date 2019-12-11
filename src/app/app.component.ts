@@ -19,9 +19,12 @@ export class AppComponent implements OnInit {
 	cartStates: any = CartStatesEnum; //Load enum to use it in HTML
 	cards: any[]; //TODO: Create model for card
 	identificationTypes: any[];  //TODO: Create model for identification types
+	paymentMethods: any[]; //TODO: Create model for payment methods
+	installments: any[];
 	cardForm: FormGroup;
 	payForm: FormGroup;
 	cardPaymentMethod: string;
+	cardPaymentMethodType: string  = 'card';
 
 	//JUST FOR TEST
 	accessToken: any;
@@ -53,6 +56,7 @@ export class AppComponent implements OnInit {
 		});
 		this.payForm = this.formBuilder.group({
 			"card": this.formBuilder.control('', [ Validators.required ]),
+			"paymentMethodType": this.formBuilder.control('', [ Validators.required ]),
 			"installments": this.formBuilder.control('1', [ Validators.required ])
 		});
 
@@ -67,7 +71,9 @@ export class AppComponent implements OnInit {
 		this.initMP();
 
 		//Fetch cards
-		this.fetchUserCards();
+		if(this.accessToken){
+			this.fetchUserCards();
+		}
 	}
 
 	//Custom events
@@ -127,10 +133,69 @@ export class AppComponent implements OnInit {
 		this.createOrderAndPay();
 	}
 
+	onChangePaymentMethod(){
+		let values: any  = {
+			"card": "",
+			"installments": ""
+		};
+
+		//Is other than card?
+		if(this.payForm.value.paymentMethodType != this.cardPaymentMethodType){
+			//Clear card & installments
+			values = {
+				"card": "-",
+				"installments": "-"
+			};
+		}
+
+		//Patch
+		this.payForm.patchValue(values);
+	}
+
+	onChangeCardSelected(){
+		let card: any = this.cards.filter(c => c.id == this.payForm.value.card).pop();
+
+		//TODO: REMOVE THIS AND LOAD FROM ORDER
+		let orderTotal: number = 10000;
+
+		//Clear installments
+		this.installments = [];
+
+		//Clear issuer id from form
+
+		//Check card found
+		if(card){
+			//Fetch installments
+			this.mercadoPagoService.getInstallments(card.firstSixDigits, orderTotal).subscribe(
+				(installments: any) => {
+					//Load installments
+					this.installments = installments.payer_costs;
+
+					//Suggest installemt
+					if(this.installments && this.installments.length){
+						this.payForm.patchValue({
+							"installments": this.installments[this.installments.length - 1].installments
+						});
+					}
+
+					//Load issuer id to payForm
+				}
+			)
+		}
+	}
+
 	//Private methods
 	private initMP() {
 		//Init SDK
 		this.mercadoPagoService.initSDK();
+
+		//Fetch paymet methods
+		this.mercadoPagoService.fetchPaymentMethod().subscribe((response: any[]) => {
+			//Load filter credit card and debit cards
+			this.paymentMethods = response.filter((pm: any) => {
+				return pm.payment_type_id != 'credit_card' && pm.payment_type_id != 'debit_card';
+			});
+		})
 
 		//Load MP identification methods
 		this.mercadoPagoService.fetchIdentificationTypes().subscribe((identificationTypes: any[]) => {
@@ -173,7 +238,7 @@ export class AppComponent implements OnInit {
 		);
 	}
 
-	createOrderAndPay(){
+	private createOrderAndPay(){
 		//Start loading
 		this.loading = true;
 
@@ -191,19 +256,20 @@ export class AppComponent implements OnInit {
 			"document":"42521866",
 			"company_name":"Bloque",
 			"company_rut":"123456123456",
-			"user_id":"39",
+			"user_id": "39",
 			"address":"",
 			"state":"",
 			"countryIso":"",
 			"city":"",
 			"extra_data": {"paymentMethod":1},
-			"payment_gateway":1,
 			"total":1,
 			//Load MP values
 			"card": {
 				"id": this.payForm.value.card,
 				"installments": this.payForm.value.installments
-			}
+			},
+			"paymentMethodType": this.payForm.value.paymentMethodType,
+			"payment_gateway": 1
 		};
 
 		//Do request
@@ -249,6 +315,7 @@ export class AppComponent implements OnInit {
 				localStorage.setItem('mp_access_token', JSON.stringify(token));
 				this.cartState = CartStatesEnum.LOGGED;
 				this.loading = false;
+				this.fetchUserCards();
 			},
 			(error: any) => {
 				this.loading = false;
@@ -258,7 +325,7 @@ export class AppComponent implements OnInit {
 
 	private loadSession() {
 		let token: string = localStorage.getItem('mp_access_token');
-		let order: number = +localStorage.getItem('mp_order');
+
 		//Check token
 		if (token) {
 			this.accessToken = JSON.parse(token);
